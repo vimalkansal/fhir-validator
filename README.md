@@ -259,10 +259,3 @@ Uses SLF4J for structured logging with different levels:
 8. Support for custom profiles and extensions
 9. Enhanced validation reporting with severity levels
 
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
