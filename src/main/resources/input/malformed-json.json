@@ -1,0 +1,9 @@
+{
+  "resourceType": "Patient"
+  "id": "malformed-example"
+  "name": [{
+    "use": "official"
+    "family": "Doe",
+    "given": ["John"]
+  }]
+}

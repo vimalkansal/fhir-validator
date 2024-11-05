@@ -1,0 +1,22 @@
+{
+  "resourceType": "Observation",
+  "id": "blood-pressure",
+  "status": "final",
+  "code": {
+    "coding": [{
+      "system": "http://loinc.org",
+      "code": "55284-4",
+      "display": "Blood Pressure"
+    }]
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "effectiveDateTime": "2023-12-25T08:30:00+01:00",
+  "valueQuantity": {
+    "value": 120,
+    "unit": "mmHg",
+    "system": "http://unitsofmeasure.org",
+    "code": "mm[Hg]"
+  }
+}

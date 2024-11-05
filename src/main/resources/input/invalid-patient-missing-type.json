@@ -1,0 +1,9 @@
+{
+  "id": "example",
+  "name": [{
+    "use": "official",
+    "family": "Doe",
+    "given": ["John"]
+  }],
+  "gender": "male"
+}
