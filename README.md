@@ -27,67 +27,6 @@ A Java application using Apache Camel and HAPI FHIR to validate FHIR resources. 
 - HAPI FHIR 6.10.3
 - SLF4J 2.0.9 (Logging framework)
 
-## FHIR Validation Details
-
-### 1. Resource Structure Validation
-- **Basic JSON Validation**
-  ```json
-  {
-    "resourceType": "Patient",  // Required field
-    "id": "example",
-    // ... other fields
-  }
-  ```
-  Error if missing resourceType:
-  ```
-  HAPI-1838: Invalid JSON content detected, missing required element: 'resourceType'
-  ```
-
-### 2. Required Fields Validation
-- **Example: Observation Status**
-  ```json
-  {
-    "resourceType": "Observation",
-    "status": "final",  // Required field
-    // ... other fields
-  }
-  ```
-  Error if missing:
-  ```
-  Observation.status: minimum required = 1, but only found 0
-  ```
-
-### 3. Terminology Validation
-- **Example: Patient Gender**
-  ```json
-  {
-    "resourceType": "Patient",
-    "gender": "male"  // Must be from AdministrativeGender value set
-  }
-  ```
-  Error for invalid value:
-  ```
-  HAPI-1821: [element="gender"] Invalid attribute value "invalid-gender": Unknown AdministrativeGender code
-  ```
-
-### 4. Data Type Validation
-- **Example: Date Format**
-  ```json
-  {
-    "birthDate": "1970-01-01"  // Must be valid date format
-  }
-  ```
-
-### 5. Reference Validation
-- **Example: Observation Subject**
-  ```json
-  {
-    "subject": {
-      "reference": "Patient/example"  // Must be valid reference format
-    }
-  }
-  ```
-
 ## Project Structure
 
 ```
@@ -107,76 +46,121 @@ src/
 │       └── output/   # General output directory
 ```
 
-## MainApp - Application Entry Point
+## FHIR Validation Implementation
 
-The `MainApp` class serves as the primary entry point for the FHIR Validator application. It handles initialization, test data generation, and Camel route configuration.
-
-### Key Features
-
-1. **Environment Initialization**
-   - Creates required directories (`input`, `output`, `error`)
-   - Cleans existing files to ensure fresh validation runs
-   - Generates sample FHIR resources for testing
-
-2. **Test Data Generation**
-   Automatically generates sample FHIR resources including:
-   - Valid Patient resource
-   - Valid Observation resource
-   - Invalid Patient (missing resourceType)
-   - Invalid Patient (wrong gender code)
-   - Invalid Observation (missing required status)
-   - Malformed JSON resource
-
-## Sample Resources and Validation Examples
-
-### 1. Valid Patient Resource
-```json
-{
-  "resourceType": "Patient",
-  "id": "example",
-  "identifier": [{
-    "system": "http://example.org/fhir/ids",
-    "value": "12345"
-  }],
-  "active": true,
-  "name": [{
-    "use": "official",
-    "family": "Doe",
-    "given": ["John"]
-  }],
-  "gender": "male",
-  "birthDate": "1970-01-01"
-}
+### Current Validation Support Chain
+```java
+ValidationSupportChain validationSupport = new ValidationSupportChain(
+    new DefaultProfileValidationSupport(fhirContext),
+    new InMemoryTerminologyServerValidationSupport(fhirContext),
+    new CommonCodeSystemsTerminologyService(fhirContext)
+);
 ```
 
-### 2. Valid Observation Resource
-```json
-{
-  "resourceType": "Observation",
-  "id": "blood-pressure",
-  "status": "final",
-  "code": {
-    "coding": [{
-      "system": "http://loinc.org",
-      "code": "55284-4",
-      "display": "Blood Pressure"
+#### 1. DefaultProfileValidationSupport
+- Base FHIR specification validation
+- Structure definitions validation
+- Resource constraints checking
+- Example validation:
+  ```json
+  {
+    "resourceType": "Patient",
+    "identifier": [{
+      "system": "http://example.org/fhir/ids",
+      "value": "12345"
     }]
-  },
-  "subject": {
-    "reference": "Patient/example"
   }
+  ```
+
+#### 2. InMemoryTerminologyServerValidationSupport
+- Code system validation
+- Value set membership checking
+- Example validation:
+  ```json
+  {
+    "gender": "male"  // Validates against AdministrativeGender code system
+  }
+  ```
+
+#### 3. CommonCodeSystemsTerminologyService
+- Standard terminology validation
+- Common code systems support
+- Example validation:
+  ```json
+  {
+    "status": "final",  // Validates ObservationStatus
+    "code": {
+      "coding": [{
+        "system": "http://loinc.org",
+        "code": "55284-4"
+      }]
+    }
+  }
+  ```
+
+### FHIR Specification Validation Types
+
+#### 1. Structure Validation
+- Resource type validation
+- Required elements checking
+- Data type conformance
+
+#### 2. Profile Validation
+- Base resource profiles
+- Custom profiles
+- Implementation guide conformance
+
+#### 3. Business Rule Validation
+- Invariants
+- Cross-field validations
+- Conditional requirements
+
+#### 4. Terminology Validation
+- Code systems (SNOMED CT, LOINC, RxNorm)
+- Value sets
+- Concept maps
+
+#### 5. Reference Validation
+- Resource references
+- Contained resources
+- Reference resolution
+
+### Missing Validations & Enhancement Opportunities
+
+#### 1. Profile-based Validation
+```java
+// Enhancement example
+ValidationResult results = validator.validateWithResult(resource, 
+    "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient");
+```
+
+#### 2. Reference Validation
+```java
+public boolean validateReferences(IBaseResource resource) {
+    List<String> references = // Extract references from resource
+    for (String reference : references) {
+        // Validate reference exists
+        // Check reference format
+    }
 }
 ```
 
-### 3. Invalid Resources with Validation Errors
-```json
-{
-  "id": "example",     // Error: Missing resourceType
-  "name": [{
-    "use": "official",
-    "family": "Doe",
-    "given": ["John"]
-  }]
+#### 3. Business Rule Validation
+```java
+public class CustomBusinessRuleValidator {
+    public ValidationResult validate(IBaseResource resource) {
+        // Custom validation rules
+        // Organization-specific requirements
+    }
+}
+```
+
+#### 4. Units of Measure Validation
+```java
+private void validateQuantities(Observation obs) {
+    // UCUM validation
+    // Value range checking
+    // Unit consistency
 }
 ```
 
@@ -196,66 +180,90 @@ mvn clean install
 java -jar target/fhir-validator-1.0-SNAPSHOT-jar-with-dependencies.jar
 ```
 
-## Validation Process Flow
+## Sample Resources
 
-1. **File Detection**
-   - Apache Camel monitors input directory
-   - Picks up new FHIR resource files
+### Valid Patient Resource
+```json
+{
+  "resourceType": "Patient",
+  "id": "example",
+  "identifier": [{
+    "system": "http://example.org/fhir/ids",
+    "value": "12345"
+  }],
+  "active": true,
+  "name": [{
+    "use": "official",
+    "family": "Doe",
+    "given": ["John"]
+  }],
+  "gender": "male",
+  "birthDate": "1970-01-01"
+}
+```
 
-2. **Initial Parsing**
-   - Validates JSON syntax
-   - Checks basic FHIR structure
+### Valid Observation Resource
+```json
+{
+  "resourceType": "Observation",
+  "status": "final",
+  "code": {
+    "coding": [{
+      "system": "http://loinc.org",
+      "code": "55284-4",
+      "display": "Blood Pressure"
+    }]
+  }
+}
+```
 
-3. **FHIR Validation**
-   - Resource structure validation
-   - Required fields validation
-   - Terminology validation
-   - Reference validation
+## Sample Run Output
 
-4. **Result Processing**
-   - Valid resources moved to valid directory
-   - Invalid resources moved to invalid directory with error details
-   - Error logging and reporting
+```
+[main] INFO com.example.MainApp - Starting FHIR validation service...
 
-## Error Categories and Examples
+# Processing Invalid Patient (Missing ResourceType)
+[INFO] Processing file: invalid-patient-missing-type.json
+[ERROR] ❌ Error: Invalid JSON content detected, missing required element: 'resourceType'
 
-1. **Structure Errors**
-   ```
-   HAPI-1838: Invalid JSON content detected, missing required element: 'resourceType'
-   ```
+# Processing Valid Observation
+[INFO] Processing file: valid-observation.json
+[INFO] ✅ Valid Observation resource: valid-observation.json
 
-2. **Code System Errors**
-   ```
-   HAPI-1821: [element="gender"] Invalid attribute value "invalid-gender": Unknown AdministrativeGender code
-   ```
-
-3. **Required Field Errors**
-   ```
-   Observation.status: minimum required = 1, but only found 0
-   ```
-
-4. **Syntax Errors**
-   ```
-   HAPI-1861: Failed to parse JSON encoded FHIR content: Unexpected character
-   ```
-
-## Logging
-
-Uses SLF4J for structured logging with different levels:
-- INFO: Processing information, successful validations
-- WARN: Non-critical issues (e.g., missing value sets)
-- ERROR: Validation failures, processing errors
-- DEBUG: Detailed processing information
+# Processing Invalid Observation (Missing Status)
+[ERROR] ❌ Invalid Observation resource: invalid-observation-missing-status.json
+Validation Messages:
+❌ Observation: Observation.status: minimum required = 1, but only found 0
+```
 
 ## Future Enhancements
 
-1. Support for additional FHIR versions
-2. Implementation Guide validation
-3. Custom validation rules
-4. Validation reports in different formats
-5. Web interface for validation
-6. Batch processing statistics
-7. Custom terminology services integration
-8. Support for custom profiles and extensions
-9. Enhanced validation reporting with severity levels
+1. Profile Validation Support
+   - US Core Profile validation
+   - Custom profile support
+   - Implementation guide validation
 
+2. Enhanced Reference Validation
+   - Reference existence checking
+   - Reference type validation
+   - Circular reference detection
+
+3. Business Rule Framework
+   - Custom validation rules
+   - Organization-specific requirements
+   - Conditional validation support
+
+4. Extended Terminology Support
+   - Additional code systems
+   - Value set expansion
+   - Terminology service integration
+
+5. Reporting and Analytics
+   - Validation statistics
+   - Error pattern analysis
+   - Batch processing reports
+
+6. Web Interface
+   - Interactive validation
+   - Real-time feedback
+   - Validation result visualization
