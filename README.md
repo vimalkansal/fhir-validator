@@ -239,9 +239,10 @@ Validation Messages:
 ## Future Enhancements
 
 1. Profile Validation Support
-   - US Core Profile validation
-   - Custom profile support
-   - Implementation guide validation
+   - Australian FHIR Implementation Guide validation (AU Base)
+   - HL7 AU Base Profiles validation
+   - AU Core Profiles support
+   - Agency/State-specific profile validation (e.g., Australian Digital Health Agency profiles)
 
 2. Enhanced Reference Validation
    - Reference existence checking
